@@ -1,2 +1,9 @@
 config.ini
 keys/
+.ssh/
+.local/
+.cache/
+.bash*
+.profile
+.sudo*
+server/dispatch/env/
