@@ -15,7 +15,7 @@ import requests
 text = str(raw_input("Enter text to send >>> "))
 
 client = requests.session()
-url = 'http://127.0.0.1:8000'
+url = 'http://54.187.189.141'
 
 # Retrieve the CSRF token first
 client.get(url)  # sets cookie
