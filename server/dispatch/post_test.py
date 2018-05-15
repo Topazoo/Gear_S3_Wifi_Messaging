@@ -1,3 +1,15 @@
+#!/usr/bin/python
+"""
+Author: Peter Swanson
+            pswanson@ucdavis.edu
+
+Description: Tests sending messages from the server via POST request
+
+Version: Python 2.7, Django 1.9.13
+
+Requires: requests
+"""
+
 import requests
 
 text = str(raw_input("Enter text to send >>> "))
