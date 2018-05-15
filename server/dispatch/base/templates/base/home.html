@@ -1,0 +1,13 @@
+{% extends 'base/base.html' %}
+{% block content %}
+{{ csrf_token }}
+
+  <br><br><br><br>
+  <div>
+    <h1body>Message Content:</h1body>
+    <h2>From: {{message.from_address}}</h2>
+    <h2>To: {{message.to_address}}</h2>
+    <h2>Text: {{message.text}}</h2>
+  </div>
+  
+{% endblock %}
