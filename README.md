@@ -56,10 +56,14 @@ Note: Requires the requests library (https://pypi.org/project/requests/)
     - base/models.py - Data structures in Django format
     - base/templates/ - HTML templates to render with dynamic content
     - dispatch/settings.py - Django project settings
+ - client/ - Contains C code for client and Tizen permissions for Samsung Wearables
+    - src/watch_sample.c - C source code for client
     
 ## Requirements
-- Python 2.7 - https://www.python.org/downloads/release/python-2714/
-
-- Django 1.9.13 - https://pypi.org/project/Django/1.9.13/
-
-- Optional (for post_test.py): Requests - https://pypi.org/project/requests/
+- Server
+   - Python 2.7 - https://www.python.org/downloads/release/python-2714/
+   - Django 1.9.13 - https://pypi.org/project/Django/1.9.13/
+   - Optional (for post_test.py): Requests - https://pypi.org/project/requests/
+- Client
+   - Tizen Studio - https://developer.tizen.org/ko/development/tizen-studio?langredirect=1
+   - Tizen Wearable v4.0
