@@ -7,3 +7,4 @@ keys/
 .profile
 .sudo*
 server/dispatch/env/
+.sign/

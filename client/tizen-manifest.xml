@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<manifest xmlns="http://tizen.org/ns/packages" api-version="4.0" package="org.example.watch_sample" version="1.0.0">
+    <author email="pswanson@ucdavis.edu" href="https://github.com/Topazoo/Gear_S3_Wifi_Messaging">Peter Swanson</author>
+    <profile name="wearable"/>
+    <watch-application ambient-support="true" appid="org.example.watch_sample" exec="watch_sample">
+        <label>watch_sample</label>
+        <icon>watch_sample.png</icon>
+    </watch-application>
+    <privileges>
+	   <privilege>http://tizen.org/privilege/network.get</privilege>
+	   <privilege>http://tizen.org/privilege/network.set</privilege>
+	   <privilege>http://tizen.org/privilege/network.profile</privilege>
+    </privileges>
+</manifest>
