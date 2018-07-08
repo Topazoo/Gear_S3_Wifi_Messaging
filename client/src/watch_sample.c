@@ -22,13 +22,11 @@ server_s* init_server(const char* server_url)
 
 	server_s* server = malloc(sizeof(server_s));
 
-	server->session = NULL; //malloc(sizeof(http_session_h));
-	server->transaction = NULL; //malloc(sizeof(http_transaction_h));
+	server->session = NULL;
+	server->transaction = NULL;
 
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
-
-	server->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
 
 	return server;
 }
@@ -74,11 +72,39 @@ void got_header_callback(http_transaction_h transaction, char* header, size_t le
 {
 	/* Get and store HTTP header data */
 	// IMPORTANT - GET and return CSRF TOKEN
-
-	// TEST BELOW - REMOVE ALL
-	server_s* server = (server_s*) server_struct; // Static cast to server data structure
-	strcpy(server->token, "TOKEN SET SUCCESSFULLY"); // Copy over placeholder
 	dlog_print(DLOG_DEBUG, "HEADER", "Got Header");
+}
+
+char* parse_CSRF_token(char* body)
+{
+	/* Parse the CSRF token */
+
+	char* token_loc;
+
+	/* Find in the full text of the page body */
+	token_loc = strstr(body, "csrfmiddlewaretoken");
+
+	/* Move to start of token text and copy over chunk */
+	token_loc += 28;
+
+	/* Find end of token and cleave end of chunk */
+	for(char* end = strstr(token_loc,"\'"); end && *end != '\0'; end++)
+		*end = '\0';
+
+	return token_loc;
+}
+
+void got_body_callback(http_transaction_h transaction, char* body, size_t length, size_t nmemb, server_s* server)
+{
+	/* Get and store HTTP body data */
+
+	char* token = parse_CSRF_token(body);
+	server->token = malloc(strlen(token) * sizeof(char) + sizeof(char));
+	strcpy(server->token, token);
+
+	dlog_print(DLOG_DEBUG, "BODY", "Got body of length %s", body);
+	dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", server->token, strlen(server->token));
+
 }
 
 void transaction_completed_callback(http_transaction_h transaction, char* body, void* data)
@@ -166,8 +192,10 @@ static void ready_transactions(server_s* server)
 		return;
 	}
 
-	/* Set callback for when server information is received */
+	/* Set callback for when header information is received */
 	http_transaction_set_received_header_cb(server->transaction, got_header_callback, server);
+	/* Set callback for when body information is received */
+	http_transaction_set_received_body_cb(server->transaction, got_body_callback, server);
 	/* Set callback for when a transaction is completed */
 	http_transaction_set_completed_cb(server->transaction, transaction_completed_callback, NULL);
 	/* Set callback for when a transaction fails */
@@ -287,7 +315,7 @@ app_create(int width, int height, void *data)
 		If this function returns false, the application is terminated */
 
 	appdata_s *ad = data;
-	ad->server = init_server("https://httpbin.org/get"); // Create server data structure
+	ad->server = init_server("http://52.25.144.62/"); // Create server data structure
 
 	/* Configure client for HTTP POST */
 	initialize_HTTP(ad);
