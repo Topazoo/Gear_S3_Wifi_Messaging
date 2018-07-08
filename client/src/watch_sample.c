@@ -17,7 +17,10 @@ server_s* init_server(const char* server_url)
 	/* Initialize and return a server struct */
 
 	server_s* server = malloc(sizeof(server_s));
+
 	server->url = malloc(sizeof(server_url) + sizeof(char));
+	strcpy(server->url, server_url);
+
 	server->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
 
 	return server;
@@ -68,6 +71,7 @@ void got_header_callback(http_transaction_h transac, char* header, size_t length
 	// TEST BELOW - REMOVE ALL
 	server_s* server = (server_s*) server_struct; // Static cast to server data structure
 	strcpy(server->token, "TOKEN SET SUCCESSFULLY"); // Copy over placeholder
+	dlog_print(DLOG_DEBUG, "HEADER", "Got Header");
 }
 
 void transaction_completed_callback(http_transaction_h transac, char* body, void* data)
@@ -89,8 +93,8 @@ static void send_POST(appdata_s* ad)
 	/* Send message data from client (watch) to server */
 
 	message_s* message = malloc(sizeof(message_s));
-	strcpy(message->from_address, "4152094084");
-	strcpy(message->to_address, "4152094084");
+	strcpy(message->from_address, "4328095084");
+	strcpy(message->to_address, "4328095084");
 	strcpy(message->message_body, "Test from Client");
 
 	dlog_print(DLOG_DEBUG, "POST", message->message_body);
@@ -121,6 +125,15 @@ static void ready_transactions(appdata_s* ad)
 	http_transaction_set_completed_cb(transact, transaction_completed_callback, NULL);
 	/* Set callback for when a transaction fails */
 	http_transaction_set_aborted_cb(transact, transaction_failed_callback, NULL);
+
+	code = http_transaction_request_set_uri(transact, ad->server->url);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set to %s", ad->server->url);
+	else
+	{
+		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL, error %d", code);
+		return;
+	}
 }
 
 static void initialize_HTTP(appdata_s* ad)
