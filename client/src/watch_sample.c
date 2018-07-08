@@ -11,8 +11,9 @@ typedef struct server {
 	char* url;  // Server url
 	char* token; // CSRF token
 
-	//http_session_h* session; // HTTP session for POST
-	//http_transaction_h* transact; // HTTP transaction for POST
+	http_session_h session; // HTTP session for POST
+	http_transaction_h transaction; // HTTP transaction for POST
+
 } server_s;
 
 server_s* init_server(const char* server_url)
@@ -21,7 +22,10 @@ server_s* init_server(const char* server_url)
 
 	server_s* server = malloc(sizeof(server_s));
 
-	server->url = malloc(strlen(server_url) * sizeof(char));
+	server->session = NULL; //malloc(sizeof(http_session_h));
+	server->transaction = NULL; //malloc(sizeof(http_transaction_h));
+
+	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
 	server->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
@@ -34,6 +38,7 @@ void deinit_server(server_s* server)
 	/* Deinitialize a server struct */
 
 	free(server->url);
+	// TODO - Free session and transactions
 	free(server->token);
 	free(server);
 }
@@ -47,7 +52,6 @@ typedef struct appdata {
 	Evas_Object *label;
 
 	server_s* server; // Server data
-	http_session_h session;
 
 	int code; // TEMP for successful init - REMOVE
 
@@ -66,7 +70,7 @@ typedef struct message {
 
 
 /* ---------- Transaction Callbacks ----------- */
-void got_header_callback(http_transaction_h transac, char* header, size_t length, void* server_struct)
+void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* server_struct)
 {
 	/* Get and store HTTP header data */
 	// IMPORTANT - GET and return CSRF TOKEN
@@ -77,13 +81,13 @@ void got_header_callback(http_transaction_h transac, char* header, size_t length
 	dlog_print(DLOG_DEBUG, "HEADER", "Got Header");
 }
 
-void transaction_completed_callback(http_transaction_h transac, char* body, void* data)
+void transaction_completed_callback(http_transaction_h transaction, char* body, void* data)
 {
 	/* Callback to record completed HTTP transactions */
 	//TODO
 }
 
-void transaction_failed_callback(http_transaction_h transac, int reason, void* data)
+void transaction_failed_callback(http_transaction_h transaction, int reason, void* data)
 {
 	/* Callback to record failed HTTP transactions */
 	//TODO
@@ -94,26 +98,36 @@ void transaction_failed_callback(http_transaction_h transac, int reason, void* d
 static void send_POST(appdata_s* ad)
 {
 	/* Send message data from client (watch) to server */
+	int code;
 
 	message_s* message = malloc(sizeof(message_s));
 	strcpy(message->from_address, "4328095084");
 	strcpy(message->to_address, "4328095084");
 	strcpy(message->message_body, "Test from Client");
 
-	dlog_print(DLOG_DEBUG, "POST", message->message_body);
+	dlog_print(DLOG_DEBUG, "POST", "Posting message: %s", message->message_body);
+
+	code = http_transaction_submit(ad->server->transaction);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction sent!");
+	else
+	{
+		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction, error %d", code);
+		return;
+	}
 
 	free(message);
 }
 
-static void ready_transactions(appdata_s* ad)
+static void ready_transactions(server_s* server)
 {
 	/* Set callbacks for transactions */
 
 	int code;
-	http_transaction_h transact = NULL;
+	http_method_e method = HTTP_METHOD_GET; // TODO - Change to POST
 
 	/* Prepare for HTTP transactions */
-	code = http_session_open_transaction(ad->session, HTTP_METHOD_POST, &transact);
+	code = http_session_open_transaction(server->session, method, &(server->transaction));
 	if(code == HTTP_ERROR_NONE)
 		dlog_print(DLOG_DEBUG, "POST", "HTTP transaction opened");
 	else
@@ -122,29 +136,47 @@ static void ready_transactions(appdata_s* ad)
 		return;
 	}
 
-	/* Set callback for when server information is received */
-	http_transaction_set_received_header_cb(transact, got_header_callback, ad->server);
-	/* Set callback for when a transaction is completed */
-	http_transaction_set_completed_cb(transact, transaction_completed_callback, NULL);
-	/* Set callback for when a transaction fails */
-	http_transaction_set_aborted_cb(transact, transaction_failed_callback, NULL);
-
 	/* Set transaction URL */
-	code = http_transaction_request_set_uri(transact, ad->server->url);
+	code = http_transaction_request_set_uri(server->transaction, server->url);
 	if(code == HTTP_ERROR_NONE)
-		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set: %s", ad->server->url);
+		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set to %s", server->url);
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL, error %d", code);
+		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL", code);
 		return;
 	}
 
+	/* Set transaction method */
+	code = http_transaction_request_set_method(server->transaction, method);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction method set");
+	else
+	{
+		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction method");
+		return;
+	}
+
+	/* Set HTTP Version */
+	code = http_transaction_request_set_version(server->transaction, HTTP_VERSION_1_1);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "HTTP", "Version set");
+	else
+	{
+		dlog_print(DLOG_DEBUG, "HTTP", "Failed to set version");
+		return;
+	}
+
+	/* Set callback for when server information is received */
+	http_transaction_set_received_header_cb(server->transaction, got_header_callback, server);
+	/* Set callback for when a transaction is completed */
+	http_transaction_set_completed_cb(server->transaction, transaction_completed_callback, NULL);
+	/* Set callback for when a transaction fails */
+	http_transaction_set_aborted_cb(server->transaction, transaction_failed_callback, NULL);
 }
 
 static void initialize_HTTP(appdata_s* ad)
 {
 	/* Set up HTTP for client */
-
 	bool auto_redirect = true;
 
 	/* Initialize HTTP functionality */
@@ -157,7 +189,7 @@ static void initialize_HTTP(appdata_s* ad)
 	}
 
 	/* Initialize  HTTP session */
-	code = http_session_create(HTTP_SESSION_MODE_NORMAL, &(ad->session));
+	code = http_session_create(HTTP_SESSION_MODE_NORMAL, &(ad->server->session));
 	if (code != HTTP_ERROR_NONE)
 	{
 		dlog_print(DLOG_DEBUG, "HTTP Session", "HTTP session failed.");
@@ -166,7 +198,7 @@ static void initialize_HTTP(appdata_s* ad)
 	}
 
 	/* Automatically redirect connections */
-	code = http_session_set_auto_redirection(ad->session, auto_redirect);
+	code = http_session_set_auto_redirection(ad->server->session, auto_redirect);
 	if (code != HTTP_ERROR_NONE)
 	{
 		dlog_print(DLOG_DEBUG, "HTTP Redirect", "HTTP Redirect failed.");
@@ -255,18 +287,18 @@ app_create(int width, int height, void *data)
 		If this function returns false, the application is terminated */
 
 	appdata_s *ad = data;
-	ad->server = init_server("http://52.25.144.62/"); // Create server data structure
+	ad->server = init_server("https://httpbin.org/get"); // Create server data structure
 
 	/* Configure client for HTTP POST */
-	initialize_HTTP(data);
+	initialize_HTTP(ad);
 
 	// TODO - get_Message()
 
 	/* Set transaction callbacks */
-	ready_transactions(data);
+	ready_transactions(ad->server);
 
 	/* Send POST to server */
-	send_POST(data);
+	send_POST(ad);
 
 	create_base_gui(ad, width, height);
 
@@ -295,7 +327,9 @@ static void
 app_terminate(void *data)
 {
 	/* Release all resources. */
-	deinitialize_HTTP(data);
+	appdata_s *ad = data;
+	deinitialize_HTTP(ad);
+	deinit_server(ad->server);
 }
 
 static void
