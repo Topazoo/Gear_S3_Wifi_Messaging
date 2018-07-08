@@ -6,57 +6,68 @@
 
 #define TEXT_BUF_SIZE 256
 
-/* Default UI and watch data */
+/* -------- Server Info Data Structures  -------- */
+typedef struct server {
+	char* url;  // Server url
+	char* token; // CSRF token
+} server_s;
+
+server_s* init_server(const char* server_url)
+{
+	/* Initialize and return a server struct */
+
+	server_s* server = malloc(sizeof(server_s));
+	server->url = malloc(sizeof(server_url) + sizeof(char));
+	server->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
+
+	return server;
+}
+
+void deinit_server(server_s* server)
+{
+	/* Deinitialize a server struct */
+
+	free(server->url);
+	free(server->token);
+	free(server);
+}
+/* -------------------------------------------- */
+
+
+/* -------------- UI and watch data ----------- */
 typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
 	Evas_Object *label;
+
 	http_session_h session; // HTTP session for POST
+	server_s* server; // Server information
 
 	int code; // TEMP for successful init - REMOVE
 
 } appdata_s;
+/* -------------------------------------------- */
 
-/* Store header information */
-typedef struct header {
-	char* token; // CSRF token
 
-} header_s;
-
-header_s* init_header()
-{
-	/* Initialize and return a header struct */
-
-	header_s* header = malloc(sizeof(header_s));
-	header->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
-
-	return header;
-}
-
-void deinit_header(header_s* header)
-{
-	/* Deinitialize a header struct */
-
-	free(header->token);
-	free(header);
-}
-
-/* Store SMS Message data */
+/* ---------- Message Data Structures --------- */
 typedef struct message {
 	char to_address[20];
 	char from_address[20];
 	char message_body[TEXT_BUF_SIZE];
 
 } message_s;
+/* -------------------------------------------- */
 
-void got_header_callback(http_transaction_h transac, char* full_header, size_t length, void* header_struct)
+
+/* ---------- Transaction Callbacks ----------- */
+void got_header_callback(http_transaction_h transac, char* header, size_t length, void* server_struct)
 {
 	/* Get and store HTTP header data */
 	// IMPORTANT - GET and return CSRF TOKEN
 
 	// TEST BELOW - REMOVE ALL
-	header_s* header = (header_s*) header_struct; // Static cast to header data structure
-	strcpy(header->token, "TOKEN SET SUCCESSFULLY"); // Copy over placeholder
+	server_s* server = (server_s*) server_struct; // Static cast to server data structure
+	strcpy(server->token, "TOKEN SET SUCCESSFULLY"); // Copy over placeholder
 }
 
 void transaction_completed_callback(http_transaction_h transac, char* body, void* data)
@@ -70,34 +81,49 @@ void transaction_failed_callback(http_transaction_h transac, int reason, void* d
 	/* Callback to record failed HTTP transactions */
 	//TODO
 }
+/* -------------------------------------------- */
 
-static void send_POST(appdata_s *ad)
+
+static void send_POST(appdata_s* ad)
 {
 	/* Send message data from client (watch) to server */
 
+	message_s* message = malloc(sizeof(message_s));
+	strcpy(message->from_address, "4152094084");
+	strcpy(message->to_address, "4152094084");
+	strcpy(message->message_body, "Test from Client");
+
+	dlog_print(DLOG_DEBUG, "POST", message->message_body);
+
+	free(message);
+}
+
+static void ready_transactions(appdata_s* ad)
+{
+	/* Set callbacks for transactions */
+
 	int code;
 	http_transaction_h transact = NULL;
-	header_s* header = init_header(); // Create header data structure
 
 	/* Prepare for HTTP transactions */
 	code = http_session_open_transaction(ad->session, HTTP_METHOD_POST, &transact);
-	if(code != HTTP_ERROR_NONE)
+	if(code == HTTP_ERROR_NONE)
 		dlog_print(DLOG_DEBUG, "POST", "HTTP transaction opened");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to open transaction");
+		dlog_print(DLOG_DEBUG, "POST", "Failed to open transaction, error %d", code);
 		return;
 	}
 
-	/* Set callback for when header information is received */
-	http_transaction_set_received_header_cb(transact, got_header_callback, header);
+	/* Set callback for when server information is received */
+	http_transaction_set_received_header_cb(transact, got_header_callback, ad->server);
 	/* Set callback for when a transaction is completed */
 	http_transaction_set_completed_cb(transact, transaction_completed_callback, NULL);
 	/* Set callback for when a transaction fails */
 	http_transaction_set_aborted_cb(transact, transaction_failed_callback, NULL);
 }
 
-static void initialize_HTTP(appdata_s *ad)
+static void initialize_HTTP(appdata_s* ad)
 {
 	/* Set up HTTP for client */
 
@@ -121,9 +147,6 @@ static void initialize_HTTP(appdata_s *ad)
 		return;
 	}
 
-	dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
-	ad->code = 1; // TEMP
-
 	/* Automatically redirect connections */
 	code = http_session_set_auto_redirection(ad->session, auto_redirect);
 	if (code != HTTP_ERROR_NONE)
@@ -132,9 +155,12 @@ static void initialize_HTTP(appdata_s *ad)
 		ad->code = -1; // TEMP - Debug
 		return;
 	}
+
+	dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
+	ad->code = 1; // TEMP
 }
 
-static void deinitialize_HTTP(appdata_s *ad)
+static void deinitialize_HTTP(appdata_s* ad)
 {
 	/* Clean up HTTP functionality */
 
@@ -211,14 +237,18 @@ app_create(int width, int height, void *data)
 		If this function returns false, the application is terminated */
 
 	appdata_s *ad = data;
+	ad->server = init_server("http://52.25.144.62/"); // Create server data structure
 
 	/* Configure client for HTTP POST */
 	initialize_HTTP(data);
 
 	// TODO - get_Message()
 
-	/* Send message from client to server */
-	send_POST(data); //Send POST
+	/* Set transaction callbacks */
+	ready_transactions(data);
+
+	/* Send POST to server */
+	send_POST(data);
 
 	create_base_gui(ad, width, height);
 
