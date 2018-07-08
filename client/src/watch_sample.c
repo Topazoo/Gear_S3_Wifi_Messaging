@@ -10,6 +10,9 @@
 typedef struct server {
 	char* url;  // Server url
 	char* token; // CSRF token
+
+	//http_session_h* session; // HTTP session for POST
+	//http_transaction_h* transact; // HTTP transaction for POST
 } server_s;
 
 server_s* init_server(const char* server_url)
@@ -18,7 +21,7 @@ server_s* init_server(const char* server_url)
 
 	server_s* server = malloc(sizeof(server_s));
 
-	server->url = malloc(sizeof(server_url) + sizeof(char));
+	server->url = malloc(strlen(server_url) * sizeof(char));
 	strcpy(server->url, server_url);
 
 	server->token = malloc(sizeof(char) * 100); // Switch to static if max size is known
@@ -43,8 +46,8 @@ typedef struct appdata {
 	Evas_Object *conform;
 	Evas_Object *label;
 
-	http_session_h session; // HTTP session for POST
-	server_s* server; // Server information
+	server_s* server; // Server data
+	http_session_h session;
 
 	int code; // TEMP for successful init - REMOVE
 
@@ -126,14 +129,16 @@ static void ready_transactions(appdata_s* ad)
 	/* Set callback for when a transaction fails */
 	http_transaction_set_aborted_cb(transact, transaction_failed_callback, NULL);
 
+	/* Set transaction URL */
 	code = http_transaction_request_set_uri(transact, ad->server->url);
 	if(code == HTTP_ERROR_NONE)
-		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set to %s", ad->server->url);
+		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set: %s", ad->server->url);
 	else
 	{
 		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL, error %d", code);
 		return;
 	}
+
 }
 
 static void initialize_HTTP(appdata_s* ad)
