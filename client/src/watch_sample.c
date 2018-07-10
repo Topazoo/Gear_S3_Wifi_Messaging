@@ -67,22 +67,20 @@ typedef struct message {
 /* -------------------------------------------- */
 
 
-/* ---------- Transaction Callbacks ----------- */
-void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* server_struct)
-{
-	/* Get and store HTTP header data */
-	// IMPORTANT - GET and return CSRF TOKEN
-	dlog_print(DLOG_DEBUG, "HEADER", "Got Header");
-}
-
 char* parse_CSRF_token(char* body)
 {
 	/* Parse the CSRF token */
 
 	char* token_loc;
 
+	if(body == NULL)
+		return body;
+
 	/* Find in the full text of the page body */
 	token_loc = strstr(body, "csrfmiddlewaretoken");
+
+	if(token_loc == NULL)
+		return NULL;
 
 	/* Move to start of token text and copy over chunk */
 	token_loc += 28;
@@ -94,45 +92,100 @@ char* parse_CSRF_token(char* body)
 	return token_loc;
 }
 
+/* ---------- Transaction Callbacks ----------- */
+void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* server_struct)
+{
+	/* Get and store HTTP header data */
+	dlog_print(DLOG_DEBUG, "HEADER", "Got Header", header);
+}
+
 void got_body_callback(http_transaction_h transaction, char* body, size_t length, size_t nmemb, server_s* server)
 {
 	/* Get and store HTTP body data */
 
 	char* token = parse_CSRF_token(body);
-	server->token = malloc(strlen(token) * sizeof(char) + sizeof(char));
-	strcpy(server->token, token);
 
-	dlog_print(DLOG_DEBUG, "BODY", "Got body of length %s", body);
-	dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", server->token, strlen(server->token));
+	if(token)
+	{
+		server->token = malloc(strlen(token) * sizeof(char) + sizeof(char));
+		strcpy(server->token, token);
+	}
+	else
+	{
+		dlog_print(DLOG_DEBUG, "Token", "No token found");
+		return;
+	}
 
-}
+	dlog_print(DLOG_DEBUG, "BODY", "Got body");
+	//dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", server->token, strlen(server->token));
+	dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", token, strlen(token));
 
-void transaction_completed_callback(http_transaction_h transaction, char* body, void* data)
-{
-	/* Callback to record completed HTTP transactions */
-	//TODO
-}
-
-void transaction_failed_callback(http_transaction_h transaction, int reason, void* data)
-{
-	/* Callback to record failed HTTP transactions */
-	//TODO
 }
 /* -------------------------------------------- */
 
+void set_transaction_headers(http_transaction_h transaction, const char* msg)
+{
+	/* Set HTTP headers required for a POST transaction */
+	char msg_length_buffer[5];
 
-static void send_POST(appdata_s* ad)
+	/* Set content type and length */
+	http_transaction_header_add_field(transaction, "Content-Type", "application/x-www-form-urlencoded");
+	sprintf(msg_length_buffer, "%d", strlen(msg));
+	http_transaction_header_add_field(transaction, "Content-Length", msg_length_buffer);
+
+	/* Set referer and User Agent */
+	http_transaction_header_add_field(transaction, "HTTP-Referer", "http://52.25.144.62/"); // TODO - May not be necessary
+	http_transaction_header_add_field(transaction, "HTTP-User-Agent", "Mozilla/5.0 (Linux; Tizen Wearable 4.0; SAMSUNG GEAR S3) AppleWebKit/537.3 (KHTML, like Gecko) Version/2.2 like Android 4.1; Mobile Safari/537.3");
+
+	//TODO - Set CSRF token
+	//http_transaction_request_set_cookie(transaction, cookie)
+}
+
+char* build_query_string(char* message)
+{
+	/* Build message into server query */
+
+	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE + 3));
+	strcpy(query, "q=");
+	strcat(query, message);
+
+	dlog_print(DLOG_DEBUG, "MESSAGE", "Query string %s", query);
+
+	return query;
+}
+
+static void send_message(appdata_s* ad, char* raw_message)
 {
 	/* Send message data from client (watch) to server */
 	int code;
+	bool ready = true;
 
-	message_s* message = malloc(sizeof(message_s));
-	strcpy(message->from_address, "4328095084");
-	strcpy(message->to_address, "4328095084");
-	strcpy(message->message_body, "Test from Client");
+	const char* message = build_query_string(raw_message);
 
-	dlog_print(DLOG_DEBUG, "POST", "Posting message: %s", message->message_body);
+	/* Set headers required to POST to Django server */
+	set_transaction_headers(ad->server->transaction, message);
 
+	/* Get ready to write message */
+	code = http_transaction_set_ready_to_write(ad->server->transaction, ready);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "WRITE", "Ready to write!");
+	else
+	{
+		dlog_print(DLOG_DEBUG, "WRITE", "Failed to get ready to write, error %d", code);
+		return;
+	}
+
+	/* Write message */
+	code = http_transaction_request_write_body(ad->server->transaction, message);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "WRITE", "Wrote %s to transaction", message);
+	else
+	{
+		dlog_print(DLOG_DEBUG, "WRITE", "Failed to write, error %d", code);
+		return;
+	}
+
+	/* Submit POST transaction */
 	code = http_transaction_submit(ad->server->transaction);
 	if(code == HTTP_ERROR_NONE)
 		dlog_print(DLOG_DEBUG, "POST", "Transaction sent!");
@@ -141,8 +194,6 @@ static void send_POST(appdata_s* ad)
 		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction, error %d", code);
 		return;
 	}
-
-	free(message);
 }
 
 static void ready_transactions(server_s* server)
@@ -150,7 +201,7 @@ static void ready_transactions(server_s* server)
 	/* Set callbacks for transactions */
 
 	int code;
-	http_method_e method = HTTP_METHOD_GET; // TODO - Change to POST
+	http_method_e method = HTTP_METHOD_POST; // TODO - Change to POST
 
 	/* Prepare for HTTP transactions */
 	code = http_session_open_transaction(server->session, method, &(server->transaction));
@@ -183,7 +234,7 @@ static void ready_transactions(server_s* server)
 	}
 
 	/* Set HTTP Version */
-	code = http_transaction_request_set_version(server->transaction, HTTP_VERSION_1_1);
+	code = http_transaction_request_set_version(server->transaction, HTTP_VERSION_1_0);
 	if(code == HTTP_ERROR_NONE)
 		dlog_print(DLOG_DEBUG, "HTTP", "Version set");
 	else
@@ -196,10 +247,8 @@ static void ready_transactions(server_s* server)
 	http_transaction_set_received_header_cb(server->transaction, got_header_callback, server);
 	/* Set callback for when body information is received */
 	http_transaction_set_received_body_cb(server->transaction, got_body_callback, server);
-	/* Set callback for when a transaction is completed */
-	http_transaction_set_completed_cb(server->transaction, transaction_completed_callback, NULL);
-	/* Set callback for when a transaction fails */
-	http_transaction_set_aborted_cb(server->transaction, transaction_failed_callback, NULL);
+
+	dlog_print(DLOG_DEBUG, "TRANSACTION", "Transactions are good to go!");
 }
 
 static void initialize_HTTP(appdata_s* ad)
@@ -315,18 +364,20 @@ app_create(int width, int height, void *data)
 		If this function returns false, the application is terminated */
 
 	appdata_s *ad = data;
-	ad->server = init_server("http://52.25.144.62/"); // Create server data structure
+	char* message;
+	ad->server = init_server("http://52.25.144.62/"); // Create server data structure with restpoint URL
 
 	/* Configure client for HTTP POST */
 	initialize_HTTP(ad);
 
 	// TODO - get_Message()
+	message = "Hello server, this is client!";
 
 	/* Set transaction callbacks */
 	ready_transactions(ad->server);
 
 	/* Send POST to server */
-	send_POST(ad);
+	send_message(ad, message);
 
 	create_base_gui(ad, width, height);
 
