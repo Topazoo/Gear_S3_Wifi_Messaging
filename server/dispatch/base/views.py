@@ -7,7 +7,7 @@ Description: Views to handle HTTP requests
 
 Version: Python 2.7, Django 1.9.13
 """
-
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from models import User, Message
 import os, sys
@@ -46,6 +46,7 @@ def read_ini():
 
     return ini_dict
 
+@csrf_exempt
 def base(request):
     ''' Send out post requests via SMTP '''
 
