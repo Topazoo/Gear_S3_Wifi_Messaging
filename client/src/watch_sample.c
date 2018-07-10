@@ -25,6 +25,7 @@ server_s* init_server(const char* server_url)
 	server->session = NULL;
 	server->transaction = NULL;
 
+	/* Allow for dynamic URL */
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
@@ -35,8 +36,12 @@ void deinit_server(server_s* server)
 {
 	/* Deinitialize a server struct */
 
+	/* Destroy transactions and session */
+	http_session_destroy_all_transactions(server->session);
+	http_session_destroy(server->session);
+
+	/* Free memory */
 	free(server->url);
-	// TODO - Free session and transactions
 	free(server->token);
 	free(server);
 }
@@ -52,6 +57,7 @@ typedef struct appdata {
 	server_s* server; // Server data
 
 	int code; // TEMP for successful init - REMOVE
+	char* message; // Temp for display
 
 } appdata_s;
 /* -------------------------------------------- */
@@ -105,7 +111,8 @@ void got_body_callback(http_transaction_h transaction, char* body, size_t length
 
 	char* token = parse_CSRF_token(body);
 
-	if(token)
+	/* TODO - Only grab on initial GET request */
+	/* if(token)
 	{
 		server->token = malloc(strlen(token) * sizeof(char) + sizeof(char));
 		strcpy(server->token, token);
@@ -114,10 +121,9 @@ void got_body_callback(http_transaction_h transaction, char* body, size_t length
 	{
 		dlog_print(DLOG_DEBUG, "Token", "No token found");
 		return;
-	}
+	} */
 
 	dlog_print(DLOG_DEBUG, "BODY", "Got body");
-	//dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", server->token, strlen(server->token));
 	dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", token, strlen(token));
 
 }
@@ -133,8 +139,7 @@ void set_transaction_headers(http_transaction_h transaction, const char* msg)
 	sprintf(msg_length_buffer, "%d", strlen(msg));
 	http_transaction_header_add_field(transaction, "Content-Length", msg_length_buffer);
 
-	/* Set referer and User Agent */
-	http_transaction_header_add_field(transaction, "HTTP-Referer", "http://52.25.144.62/"); // TODO - May not be necessary
+	/* Set User Agent */
 	http_transaction_header_add_field(transaction, "HTTP-User-Agent", "Mozilla/5.0 (Linux; Tizen Wearable 4.0; SAMSUNG GEAR S3) AppleWebKit/537.3 (KHTML, like Gecko) Version/2.2 like Android 4.1; Mobile Safari/537.3");
 
 	//TODO - Set CSRF token
@@ -160,6 +165,7 @@ static void send_message(appdata_s* ad, char* raw_message)
 	int code;
 	bool ready = true;
 
+	/* Turn message into query */
 	const char* message = build_query_string(raw_message);
 
 	/* Set headers required to POST to Django server */
@@ -194,14 +200,16 @@ static void send_message(appdata_s* ad, char* raw_message)
 		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction, error %d", code);
 		return;
 	}
+
+	//free(message);
 }
 
-static void ready_transactions(server_s* server)
+static void ready_transaction(server_s* server, http_method_e method)
 {
 	/* Set callbacks for transactions */
 
 	int code;
-	http_method_e method = HTTP_METHOD_POST; // TODO - Change to POST
+	//http_method_e method = HTTP_METHOD_POST;
 
 	/* Prepare for HTTP transactions */
 	code = http_session_open_transaction(server->session, method, &(server->transaction));
@@ -248,7 +256,10 @@ static void ready_transactions(server_s* server)
 	/* Set callback for when body information is received */
 	http_transaction_set_received_body_cb(server->transaction, got_body_callback, server);
 
-	dlog_print(DLOG_DEBUG, "TRANSACTION", "Transactions are good to go!");
+	if(method == HTTP_METHOD_POST)
+		dlog_print(DLOG_DEBUG, "TRANSACTION", "POST transaction is good to go!");
+	else if(method == HTTP_METHOD_GET)
+		dlog_print(DLOG_DEBUG, "TRANSACTION", "GET transaction is good to go!");
 }
 
 static void initialize_HTTP(appdata_s* ad)
@@ -298,10 +309,6 @@ static void deinitialize_HTTP(appdata_s* ad)
 		dlog_print(DLOG_DEBUG, "HTTP Deinitialization", "HTTP deinitialized.");
 	else
 		dlog_print(DLOG_DEBUG, "HTTP Deinitialization", "HTTP deinitialization failed.");
-
-	// TODO - Destroy all transactions
-	// TODO - Destroy sessions
-
 }
 
 static void
@@ -310,7 +317,7 @@ update_watch(appdata_s *ad)
 	char watch_text[TEXT_BUF_SIZE];
 
 	if(ad->code > 0) // Placeholder watch text
-		snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>HTTP Session Active<br>-<br>Transaction Opened</align>");
+		snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>Sent message \"%s\" from client!</align>", ad->message);
 	else
 		snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>HTTP Session Failed</align>");
 
@@ -364,20 +371,19 @@ app_create(int width, int height, void *data)
 		If this function returns false, the application is terminated */
 
 	appdata_s *ad = data;
-	char* message;
 	ad->server = init_server("http://52.25.144.62/"); // Create server data structure with restpoint URL
+	ad->message = "Hello server!\nThis is client!";
 
 	/* Configure client for HTTP POST */
 	initialize_HTTP(ad);
 
 	// TODO - get_Message()
-	message = "Hello server, this is client!";
 
-	/* Set transaction callbacks */
-	ready_transactions(ad->server);
+	/* Get ready for POST transaction */
+	ready_transaction(ad->server, HTTP_METHOD_POST);
 
 	/* Send POST to server */
-	send_message(ad, message);
+	send_message(ad, ad->message);
 
 	create_base_gui(ad, width, height);
 
