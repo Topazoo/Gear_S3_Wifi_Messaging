@@ -5,11 +5,18 @@
 [![Django 1.9.13](https://img.shields.io/badge/Django-1.9.13-brightgreen.svg)](https://pypi.org/project/Django/1.9.13/)
 
 ## Background
-The Samsung Gear S3 Classic has no built-in messaging for iPhones
+Until now, the Samsung Gear S3 Classic did not allow users to send messages over Wifi.
 
-<b>This application will allow messages to be sent from the watch to both phones and emails via SMTP.</b>
+<b>This application allows messages to be sent from the watch over Wifi</b>
 
-## Setup
+This repository contains the application client and server. The client runs natively on the watch and communicates with the server via the Tizen HTTP library. The server sends messages using the Gmail SMTP server.
+
+## Server Deployment
+### Starting the server:
+This server can be run on your local machine using Django or deployed to the cloud. For the latter I prefer using:
+- An AWS Ubuntu instance (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html)
+- Nginx and gunicorn (https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu-16-04)
+
 ### Create a config.ini file:
 This file should be placed in the <b>server/dispatch</b> directory (the directory that contains 
 <b>manage.py</b>).
@@ -45,7 +52,7 @@ The <b>post_test.py</b> file records user input and sends it to the server as a 
 ```
 $ python post_test.py
 ```
-Note: Requires the requests library (https://pypi.org/project/requests/)
+Note: Requires the requests library (https://pypi.org/project/requests/) and the URL of the server.
 
 ## Files
  - server/dispatch/ - Contains Django server files
