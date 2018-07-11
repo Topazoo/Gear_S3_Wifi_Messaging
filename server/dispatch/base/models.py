@@ -22,13 +22,15 @@ class User(models.Model):
 
     gmail_server = models.CharField(max_length=20, blank=False)
 
+    wp_API_key = models.CharField(max_length=20, blank=True)
+
 
 class Message(models.Model):
     ''' Class to represent text messages '''
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
-    to_address = models.CharField(max_length=20, blank=False, default='7073476348@vtext.com')
+    to_address = models.CharField(max_length=20, blank=False, default='4152094084@vtext.com')
                                     #validators=[ RegexValidator(regex=r'^\D?(\d{3})\D?\D?(\d{3})\D?(\d{4})$',
                                      #                           message="Invalid phone number!"), ])
 
