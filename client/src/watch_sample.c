@@ -29,7 +29,7 @@ server_s* init_server(const char* server_url)
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
-	server->token = malloc(1024 * sizeof(char)); // TODO - Make dynamic
+	server->token = malloc(1024 * sizeof(char)); // TODO - Make token size dynamic
 
 	return server;
 }
@@ -66,8 +66,10 @@ message_s* create_message(char* to_number, char* from_number, char* message)
 
 	/* Set the number the message is being sent to */
 	strcpy(new_message->to_address, to_number);
+
 	/* Set the number the message is being sent from */
 	strcpy(new_message->from_address, from_number);
+
 	/* Set the message being sent */
 	strcpy(new_message->message_body, message);
 
@@ -80,11 +82,10 @@ message_s* create_message(char* to_number, char* from_number, char* message)
 typedef struct appdata {
 	Evas_Object *win;
 	Evas_Object *conform;
-	Evas_Object *label;
+	Evas_Object *button;
 
 	server_s* server; // Server data
 	message_s* message; // Message to send
-	volatile int sent;
 
 } appdata_s;
 /* -------------------------------------------- */
@@ -183,7 +184,7 @@ char* build_query_string(message_s* message, char* csrf)
 {
 	/* Build message into server query */
 
-	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE * 3));
+	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE * 3)); // TODO - Make query string dynamic
 	strcpy(query, "message=");
 	strcat(query, message->message_body);
 	strcat(query, "&to_number=");
@@ -210,10 +211,11 @@ int send_message(appdata_s* ad)
 	char* input = "Hello from client!"; //TODO - Get input from watch
 
 	/* Get the message being sent */
-	message_s* message_struct = create_message(to_number, from_number, input); //TODO - Create messages in button callback
+	message_s* message_struct = create_message(to_number, from_number, input);
 	ad->message = message_struct;
+
 	/* Turn message into query */
-	const char* message = build_query_string(message_struct, csrf);
+	char* message = build_query_string(message_struct, csrf);
 
 	/* Set headers required to POST to Django server */
 	set_transaction_headers(ad->server->transaction, message, csrf);
@@ -310,6 +312,30 @@ int ready_transaction(server_s* server, http_method_e method)
 	return 0;
 }
 
+/* ---------- Button Callbacks ----------- */
+void message_send_button_callback(void* data, Evas_Object *obj, void* event_info)
+{
+	/* Send POST to server */
+
+	int error_code;
+	appdata_s* ad = data;
+
+	/* Get ready for POST transaction */
+	error_code = ready_transaction(ad->server, HTTP_METHOD_POST);
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction is good to go!");
+
+	/* Send POST transaction */
+	error_code = send_message(ad);
+
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction sent successfully!");
+
+}
+
+/* -------------------------------------------- */
+
+
 int initialize_HTTP(appdata_s* ad)
 {
 	/* Set up HTTP for client */
@@ -358,28 +384,15 @@ static void deinitialize_HTTP(appdata_s* ad)
 static void
 update_watch(appdata_s *ad)
 {
-	char watch_text[TEXT_BUF_SIZE];
-	int error_code = -1;
-
-	/* Send POST to server */
-	if(ad->sent == 0)
-	{
-		error_code = send_message(ad);
-		ad->sent = 1;
-	}
-	if(error_code == 0)
-		dlog_print(DLOG_DEBUG, "POST", "Transaction sent successfully!");
-
-	snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>\"%s\"</align>", ad->message->message_body);
-
-	elm_object_text_set(ad->label, watch_text);
+	//char watch_text[TEXT_BUF_SIZE];
+	//snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>\"%s\"</align>", ad->message->message_body);
+	//elm_object_text_set(ad->label, watch_text);
 }
 
 static void
 create_base_gui(appdata_s *ad, int width, int height)
 {
 	int ret;
-	watch_time_h watch_time = NULL;
 
 	/* Window */
 	ret = watch_app_get_elm_win(&ad->win);
@@ -396,18 +409,15 @@ create_base_gui(appdata_s *ad, int width, int height)
 	elm_win_resize_object_add(ad->win, ad->conform);
 	evas_object_show(ad->conform);
 
-	/* Label*/
-	ad->label = elm_label_add(ad->conform);
-	evas_object_resize(ad->label, width, height / 3);
-	evas_object_move(ad->label, 0, height / 3);
-	evas_object_show(ad->label);
-
-	ret = watch_time_get_current_time(&watch_time);
-	if (ret != APP_ERROR_NONE)
-		dlog_print(DLOG_ERROR, LOG_TAG, "failed to get current time. err = %d", ret);
+	/* Button */
+	ad->button = elm_button_add(ad->conform);
+	evas_object_resize(ad->button, width, height / 3);
+	evas_object_move(ad->button, 0, height / 3);
+	elm_object_text_set(ad->button, "Send Message");
+	evas_object_smart_callback_add(ad->button, "clicked", message_send_button_callback, ad);
+	evas_object_show(ad->button);
 
 	update_watch(ad);
-	watch_time_delete(watch_time);
 
 	/* Show window after base gui is set up */
 	evas_object_show(ad->win);
@@ -431,13 +441,6 @@ app_create(int width, int height, void *data)
 	error_code = initialize_HTTP(ad);
 	if(error_code == 0)
 		dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
-
-	// TODO - Get and set CSRF token
-
-	/* Get ready for POST transaction */
-	error_code = ready_transaction(ad->server, HTTP_METHOD_POST);
-	if(error_code == 0)
-		dlog_print(DLOG_DEBUG, "POST", "Transaction is good to go!");
 
 	create_base_gui(ad, width, height);
 
