@@ -29,6 +29,8 @@ server_s* init_server(const char* server_url)
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
+	server->token = malloc(1024 * sizeof(char));
+
 	return server;
 }
 
@@ -48,6 +50,32 @@ void deinit_server(server_s* server)
 /* -------------------------------------------- */
 
 
+/* ---------- Message Data Structures --------- */
+typedef struct message {
+	char to_address[20];
+	char from_address[20];
+	char message_body[TEXT_BUF_SIZE * 2];
+
+} message_s;
+
+message_s* create_message(char* to_number, char* from_number, char* message)
+{
+	/* Create a message object from passed info */
+
+	message_s* new_message = malloc(sizeof(message_s));
+
+	/* Set the number the message is being sent to */
+	strcpy(new_message->to_address, to_number);
+	/* Set the number the message is being sent from */
+	strcpy(new_message->from_address, from_number);
+	/* Set the message being sent */
+	strcpy(new_message->message_body, message);
+
+	return new_message;
+}
+/* -------------------------------------------- */
+
+
 /* -------------- UI and watch data ----------- */
 typedef struct appdata {
 	Evas_Object *win;
@@ -55,21 +83,9 @@ typedef struct appdata {
 	Evas_Object *label;
 
 	server_s* server; // Server data
-
-	int code; // TEMP for successful init - REMOVE
-	char* message; // Temp for display
+	message_s* message; // Message to send
 
 } appdata_s;
-/* -------------------------------------------- */
-
-
-/* ---------- Message Data Structures --------- */
-typedef struct message {
-	char to_address[20];
-	char from_address[20];
-	char message_body[TEXT_BUF_SIZE];
-
-} message_s;
 /* -------------------------------------------- */
 
 
@@ -78,6 +94,7 @@ char* parse_CSRF_token(char* body)
 	/* Parse the CSRF token */
 
 	char* token_loc;
+	char* end;
 
 	if(body == NULL)
 		return body;
@@ -92,44 +109,59 @@ char* parse_CSRF_token(char* body)
 	token_loc += 28;
 
 	/* Find end of token and cleave end of chunk */
-	for(char* end = strstr(token_loc,"\'"); end && *end != '\0'; end++)
-		*end = '\0';
+	end = strstr(token_loc,"\'"); *end = '\0';
 
 	return token_loc;
 }
 
+void get_CSRF_token(server_s* server)
+{
+	/* Set CSRF token from server via callback */
+
+	int code;
+
+	code = http_transaction_submit(server->transaction);
+	if(code == HTTP_ERROR_NONE)
+		dlog_print(DLOG_DEBUG, "GET", "Transaction sent!");
+	else
+	{
+		dlog_print(DLOG_DEBUG, "GET", "Failed to send transaction, error %d", code);
+		return;
+	}
+
+}
+
 /* ---------- Transaction Callbacks ----------- */
-void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* server_struct)
+void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* data)
 {
 	/* Get and store HTTP header data */
+
 	dlog_print(DLOG_DEBUG, "HEADER", "Got Header", header);
 }
 
-void got_body_callback(http_transaction_h transaction, char* body, size_t length, size_t nmemb, server_s* server)
+void got_body_callback(http_transaction_h transaction, char* body, size_t length, size_t nmemb, void* data)
 {
 	/* Get and store HTTP body data */
 
 	char* token = parse_CSRF_token(body);
+	server_s* server = (server_s*) data;
 
-	/* TODO - Only grab on initial GET request */
-	/* if(token)
+	if(token)
 	{
-		server->token = malloc(strlen(token) * sizeof(char) + sizeof(char));
 		strcpy(server->token, token);
+		dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d in body callback", server->token, strlen(server->token));
 	}
 	else
 	{
 		dlog_print(DLOG_DEBUG, "Token", "No token found");
 		return;
-	} */
+	}
 
 	dlog_print(DLOG_DEBUG, "BODY", "Got body");
-	dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d", token, strlen(token));
-
 }
 /* -------------------------------------------- */
 
-void set_transaction_headers(http_transaction_h transaction, const char* msg)
+void set_transaction_headers(http_transaction_h transaction, const char* msg, char* csrf)
 {
 	/* Set HTTP headers required for a POST transaction */
 	char msg_length_buffer[5];
@@ -142,43 +174,50 @@ void set_transaction_headers(http_transaction_h transaction, const char* msg)
 	/* Set User Agent */
 	http_transaction_header_add_field(transaction, "HTTP-User-Agent", "Mozilla/5.0 (Linux; Tizen Wearable 4.0; SAMSUNG GEAR S3) AppleWebKit/537.3 (KHTML, like Gecko) Version/2.2 like Android 4.1; Mobile Safari/537.3");
 
-	//TODO - Set CSRF token
-	//http_transaction_request_set_cookie(transaction, cookie)
+	/* Set CSRF token */
+	http_transaction_header_add_field(transaction, "CSRF-Cookie", csrf);
 }
 
-char* build_query_string(char* message)
+char* build_query_string(message_s* message, char* csrf)
 {
 	/* Build message into server query */
 
-	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE + 3));
-	strcpy(query, "q=");
-	strcat(query, message);
+	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE * 3));
+	strcpy(query, "message=");
+	strcat(query, message->message_body);
+	strcat(query, "&to_number=");
+	strcat(query, message->to_address);
+	strcat(query, "&from_number=");
+	strcat(query, message->from_address);
+	strcat(query, "&csrfmiddlewaretoken=");
+	strcat(query, csrf);
 
 	dlog_print(DLOG_DEBUG, "MESSAGE", "Query string %s", query);
 
 	return query;
 }
 
-static void send_message(appdata_s* ad, char* raw_message)
+int send_message(appdata_s* ad)
 {
 	/* Send message data from client (watch) to server */
+
 	int code;
-	bool ready = true;
+	char* csrf = "1234";
 
 	/* Turn message into query */
-	const char* message = build_query_string(raw_message);
+	const char* message = build_query_string(ad->message, csrf);
 
 	/* Set headers required to POST to Django server */
-	set_transaction_headers(ad->server->transaction, message);
+	set_transaction_headers(ad->server->transaction, message, csrf);
 
 	/* Get ready to write message */
-	code = http_transaction_set_ready_to_write(ad->server->transaction, ready);
+	code = http_transaction_set_ready_to_write(ad->server->transaction, 1);
 	if(code == HTTP_ERROR_NONE)
 		dlog_print(DLOG_DEBUG, "WRITE", "Ready to write!");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "WRITE", "Failed to get ready to write, error %d", code);
-		return;
+		dlog_print(DLOG_DEBUG, "WRITE", "Failed to get ready to write - error %d", code);
+		return -1;
 	}
 
 	/* Write message */
@@ -187,8 +226,8 @@ static void send_message(appdata_s* ad, char* raw_message)
 		dlog_print(DLOG_DEBUG, "WRITE", "Wrote %s to transaction", message);
 	else
 	{
-		dlog_print(DLOG_DEBUG, "WRITE", "Failed to write, error %d", code);
-		return;
+		dlog_print(DLOG_DEBUG, "WRITE", "Failed to write - error %d", code);
+		return -2;
 	}
 
 	/* Submit POST transaction */
@@ -197,19 +236,18 @@ static void send_message(appdata_s* ad, char* raw_message)
 		dlog_print(DLOG_DEBUG, "POST", "Transaction sent!");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction, error %d", code);
-		return;
+		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction - error %d", code);
+		return -3;
 	}
 
-	//free(message);
+	return 0;
 }
 
-static void ready_transaction(server_s* server, http_method_e method)
+int ready_transaction(server_s* server, http_method_e method)
 {
 	/* Set callbacks for transactions */
 
 	int code;
-	//http_method_e method = HTTP_METHOD_POST;
 
 	/* Prepare for HTTP transactions */
 	code = http_session_open_transaction(server->session, method, &(server->transaction));
@@ -217,8 +255,8 @@ static void ready_transaction(server_s* server, http_method_e method)
 		dlog_print(DLOG_DEBUG, "POST", "HTTP transaction opened");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to open transaction, error %d", code);
-		return;
+		dlog_print(DLOG_DEBUG, "POST", "Failed to open transaction - error %d", code);
+		return -1;
 	}
 
 	/* Set transaction URL */
@@ -227,8 +265,8 @@ static void ready_transaction(server_s* server, http_method_e method)
 		dlog_print(DLOG_DEBUG, "POST", "Transaction URL set to %s", server->url);
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL", code);
-		return;
+		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction URL - error %d", code);
+		return -2;
 	}
 
 	/* Set transaction method */
@@ -237,8 +275,8 @@ static void ready_transaction(server_s* server, http_method_e method)
 		dlog_print(DLOG_DEBUG, "POST", "Transaction method set");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction method");
-		return;
+		dlog_print(DLOG_DEBUG, "POST", "Failed to set transaction method - error %d", code);
+		return -3;
 	}
 
 	/* Set HTTP Version */
@@ -247,8 +285,8 @@ static void ready_transaction(server_s* server, http_method_e method)
 		dlog_print(DLOG_DEBUG, "HTTP", "Version set");
 	else
 	{
-		dlog_print(DLOG_DEBUG, "HTTP", "Failed to set version");
-		return;
+		dlog_print(DLOG_DEBUG, "HTTP", "Failed to set version - error %d", code);
+		return -4;
 	}
 
 	/* Set callback for when header information is received */
@@ -260,9 +298,11 @@ static void ready_transaction(server_s* server, http_method_e method)
 		dlog_print(DLOG_DEBUG, "TRANSACTION", "POST transaction is good to go!");
 	else if(method == HTTP_METHOD_GET)
 		dlog_print(DLOG_DEBUG, "TRANSACTION", "GET transaction is good to go!");
+
+	return 0;
 }
 
-static void initialize_HTTP(appdata_s* ad)
+int initialize_HTTP(appdata_s* ad)
 {
 	/* Set up HTTP for client */
 	bool auto_redirect = true;
@@ -271,31 +311,27 @@ static void initialize_HTTP(appdata_s* ad)
 	int code = http_init();
 	if (code != HTTP_ERROR_NONE)
 	{
-		dlog_print(DLOG_DEBUG, "HTTP Initialization", "HTTP initialization failed.");
-		ad->code = -1; // TEMP
-		return;
+		dlog_print(DLOG_DEBUG, "HTTP Initialization", "HTTP initialization failed - error %d", code);
+		return -1;
 	}
 
 	/* Initialize  HTTP session */
 	code = http_session_create(HTTP_SESSION_MODE_NORMAL, &(ad->server->session));
 	if (code != HTTP_ERROR_NONE)
 	{
-		dlog_print(DLOG_DEBUG, "HTTP Session", "HTTP session failed.");
-		ad->code = -1; // TEMP
-		return;
+		dlog_print(DLOG_DEBUG, "HTTP Session", "HTTP session failed - error %d", code);
+		return -2;
 	}
 
 	/* Automatically redirect connections */
 	code = http_session_set_auto_redirection(ad->server->session, auto_redirect);
 	if (code != HTTP_ERROR_NONE)
 	{
-		dlog_print(DLOG_DEBUG, "HTTP Redirect", "HTTP Redirect failed.");
-		ad->code = -1; // TEMP - Debug
-		return;
+		dlog_print(DLOG_DEBUG, "HTTP Redirect", "HTTP Redirect failed - error %d", code);
+		return -3;
 	}
 
-	dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
-	ad->code = 1; // TEMP
+	return 0;
 }
 
 static void deinitialize_HTTP(appdata_s* ad)
@@ -316,10 +352,7 @@ update_watch(appdata_s *ad)
 {
 	char watch_text[TEXT_BUF_SIZE];
 
-	if(ad->code > 0) // Placeholder watch text
-		snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>Sent message \"%s\" from client!</align>", ad->message);
-	else
-		snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>HTTP Session Failed</align>");
+	snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>\"%s\"</align>", ad->message->message_body);
 
 	elm_object_text_set(ad->label, watch_text);
 }
@@ -370,20 +403,37 @@ app_create(int width, int height, void *data)
 		If this function returns true, the main loop of application starts
 		If this function returns false, the application is terminated */
 
+	int error_code = 0;
 	appdata_s *ad = data;
 	ad->server = init_server("http://52.25.144.62/"); // Create server data structure with restpoint URL
-	ad->message = "Hello server!\nThis is client!";
+
+	char* to_number = "4152094084";
+	char* from_number = "4152094084";
+	char* message = "Hello from client";
 
 	/* Configure client for HTTP POST */
-	initialize_HTTP(ad);
+	error_code = initialize_HTTP(ad);
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
 
-	// TODO - get_Message()
+	/* Set the message being sent */
+	ad->message = create_message(to_number, from_number, message);
+
+	/* Get ready for GET transaction */
+	//ready_transaction(ad->server, HTTP_METHOD_GET);
+
+	/* Send GET transaction for CSRF token */
+	//get_CSRF_token(ad->server);
 
 	/* Get ready for POST transaction */
-	ready_transaction(ad->server, HTTP_METHOD_POST);
+	error_code = ready_transaction(ad->server, HTTP_METHOD_POST);
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction is good to go!");
 
 	/* Send POST to server */
-	send_message(ad, ad->message);
+	error_code = send_message(ad);
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction sent successfully!");
 
 	create_base_gui(ad, width, height);
 
@@ -412,9 +462,13 @@ static void
 app_terminate(void *data)
 {
 	/* Release all resources. */
+
 	appdata_s *ad = data;
+
 	deinitialize_HTTP(ad);
 	deinit_server(ad->server);
+
+	free(ad->message);
 }
 
 static void

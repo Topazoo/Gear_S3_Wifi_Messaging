@@ -46,6 +46,12 @@ def read_ini():
 
     return ini_dict
 
+def add_ext(phone_number):
+    ''' Add the correct extensions '''
+    
+    # TODO - Get or scrape extension
+    return str(phone_number) + "@vtext.com"
+
 @csrf_exempt
 def base(request):
     ''' Send out post requests via SMTP '''
@@ -56,10 +62,12 @@ def base(request):
 
     # Send message from user
     if request.method == 'POST':
-        message = Message(user=user,text=request.POST['q'])
+        to = add_ext(request.POST['to_number'])
+        from_n = request.POST['from_number']
+        message = Message(user=user, to_address=to, from_address=from_n ,text=request.POST['message'])
         message.send_message()
     else:
         message = Message(user=user, text='NO POST')
 
-    # Render message details (Change to HttpResponse)
+    # Render
     return render(request, 'base/home.html', {'message': message})
