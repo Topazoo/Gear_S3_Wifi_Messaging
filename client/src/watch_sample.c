@@ -29,7 +29,7 @@ server_s* init_server(const char* server_url)
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
-	server->token = malloc(1024 * sizeof(char));
+	server->token = malloc(1024 * sizeof(char)); // TODO - Make dynamic
 
 	return server;
 }
@@ -84,6 +84,7 @@ typedef struct appdata {
 
 	server_s* server; // Server data
 	message_s* message; // Message to send
+	volatile int sent;
 
 } appdata_s;
 /* -------------------------------------------- */
@@ -202,10 +203,17 @@ int send_message(appdata_s* ad)
 	/* Send message data from client (watch) to server */
 
 	int code;
-	char* csrf = "1234";
+	char* csrf = "1234"; // TODO - Get and set real CSRF
 
+	char* to_number = "4152094084";
+	char* from_number = "4152094084";
+	char* input = "Hello from client!"; //TODO - Get input from watch
+
+	/* Get the message being sent */
+	message_s* message_struct = create_message(to_number, from_number, input); //TODO - Create messages in button callback
+	ad->message = message_struct;
 	/* Turn message into query */
-	const char* message = build_query_string(ad->message, csrf);
+	const char* message = build_query_string(message_struct, csrf);
 
 	/* Set headers required to POST to Django server */
 	set_transaction_headers(ad->server->transaction, message, csrf);
@@ -351,6 +359,16 @@ static void
 update_watch(appdata_s *ad)
 {
 	char watch_text[TEXT_BUF_SIZE];
+	int error_code = -1;
+
+	/* Send POST to server */
+	if(ad->sent == 0)
+	{
+		error_code = send_message(ad);
+		ad->sent = 1;
+	}
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "POST", "Transaction sent successfully!");
 
 	snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>\"%s\"</align>", ad->message->message_body);
 
@@ -405,35 +423,21 @@ app_create(int width, int height, void *data)
 
 	int error_code = 0;
 	appdata_s *ad = data;
-	ad->server = init_server("http://52.25.144.62/"); // Create server data structure with restpoint URL
 
-	char* to_number = "4152094084";
-	char* from_number = "4152094084";
-	char* message = "Hello from client";
+	/* Create server data structure with restpoint URL */
+	ad->server = init_server("http://52.25.144.62/");
 
 	/* Configure client for HTTP POST */
 	error_code = initialize_HTTP(ad);
 	if(error_code == 0)
 		dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
 
-	/* Set the message being sent */
-	ad->message = create_message(to_number, from_number, message);
-
-	/* Get ready for GET transaction */
-	//ready_transaction(ad->server, HTTP_METHOD_GET);
-
-	/* Send GET transaction for CSRF token */
-	//get_CSRF_token(ad->server);
+	// TODO - Get and set CSRF token
 
 	/* Get ready for POST transaction */
 	error_code = ready_transaction(ad->server, HTTP_METHOD_POST);
 	if(error_code == 0)
 		dlog_print(DLOG_DEBUG, "POST", "Transaction is good to go!");
-
-	/* Send POST to server */
-	error_code = send_message(ad);
-	if(error_code == 0)
-		dlog_print(DLOG_DEBUG, "POST", "Transaction sent successfully!");
 
 	create_base_gui(ad, width, height);
 
