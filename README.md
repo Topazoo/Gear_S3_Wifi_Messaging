@@ -29,7 +29,7 @@ password=PASSWORD
 server=SERVER
 key=KEY
 ```
-Where the lefthand value is your SMTP server username, password, and server respectively. 
+Where the left-hand value is your SMTP server username, password, and server respectively. 
 
 Notes: If you are using gmail, the server argument is optional. In this case the prior two arguments are your gmail
 username and password respectively. The key argument is optional and only necessary when using Whitepages for phone number carrier lookup. 
@@ -45,7 +45,7 @@ Then run the server.
 ```
 python manage.py runserver
 ```
-You can visit the server at http://127.0.0.1:8000/, however it is meant to be a RESTful enpoint 
+You can visit the server at http://127.0.0.1:8000/, however it is meant to be a RESTful endpoint 
 rather than a real website.
 
 ### Sending a message to/from the server:
@@ -74,5 +74,7 @@ Note: Requires the URL of a running server instance.
    - Django 1.9.13 - https://pypi.org/project/Django/1.9.13/
    - Requests 2.19.1 - https://pypi.org/project/requests/
 - Client
-   - Tizen Studio - https://developer.tizen.org/ko/development/tizen-studio?langredirect=1
-   - Tizen Wearable v4.0
+   - Tizen Studio w/ a compatible Tizen Wearable version - https://developer.samsung.com/gear/develop/device-compatibility
+   - Tizen Certificate Extension - https://developer.tizen.org/ko/development/tizen-studio/web-tools/managing-projects/certificate-registration?langredirect=1
+   - Samsung Certificate generated with the Certificate Extension w/ a compatible version 
+   - Privileges: network.get and internet
