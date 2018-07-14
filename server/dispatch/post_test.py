@@ -13,6 +13,9 @@ Requires: requests
 import requests
 
 text = str(raw_input("Enter text to send >>> "))
+to_number = str(raw_input("Enter a number to send it to >>> "))
+from_number = "4152094084"
+carrier = "Verizon"
 
 client = requests.session()
 url = 'http://52.25.144.62/'
@@ -26,5 +29,5 @@ else:
     # older versions
     csrftoken = client.cookies['csrf']
 
-data = dict(q=text, csrfmiddlewaretoken=csrftoken, next='/')
+data = dict(message=text,to_number=to_number, from_number=from_number, carrier=carrier, csrfmiddlewaretoken=csrftoken)
 r = client.post(url, data=data, headers=dict(Referer=url))

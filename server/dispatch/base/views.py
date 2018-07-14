@@ -48,22 +48,27 @@ def read_ini():
 
     return ini_dict
 
-def add_ext(phone_number, key):
+def add_ext(post, key):
     ''' Add the correct extension to text the number - Requires a Whitepages Pro developer account '''
     
-    carrier = "verizon"
+    phone_number = post['to_number']
 
-    if key != "NONE":
-        # Query white pages for carrier data 
-        url = "https://proapi.whitepages.com/3.0/phone_intel?phone=" + phone_number
-        api_key = "&api_key=" + key
-        url += api_key
-        res = requests.get(url)
-        carrier = str(res.json()["carrier"]).lower()
+    if 'carrier' in post.keys():
+        carrier = post['carrier']
+    else:
+        carrier = "verizon"
+
+        if key != "NONE":
+            # Query white pages for carrier data 
+            url = "https://proapi.whitepages.com/3.0/phone_intel?phone=" + phone_number
+            api_key = "&api_key=" + key
+            url += api_key
+            res = requests.get(url)
+            carrier = str(res.json()["carrier"]).lower()
 
     if "verizon" in carrier:
         return str(phone_number) + "@vtext.com"
-    elif "at&t" in carrier:
+    elif "at&t" in carrier or "att" in carrier:
         return str(phone_number) + "@txt.att.net"
     elif "sprint" in carrier:
        return str(phone_number) + "@messaging.sprintpcs.com"
@@ -82,7 +87,7 @@ def base(request):
 
     # Send message from user
     if request.method == 'POST':
-        to = add_ext(request.POST['to_number'], ini["key"])
+        to = add_ext(request.POST, ini["key"])
         from_n = request.POST['from_number']
         message = Message(user=user, to_address=to, from_address=from_n ,text=request.POST['message'])
         message.send_message()
