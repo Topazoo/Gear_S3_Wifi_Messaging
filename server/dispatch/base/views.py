@@ -7,7 +7,7 @@ Description: Views to handle HTTP requests
 
 Version: Python 2.7, Django 1.9.13
 """
-from django.views.decorators.csrf import csrf_exempt
+
 from django.shortcuts import render
 from models import User, Message
 import os, sys, requests
@@ -77,7 +77,6 @@ def add_ext(post, key):
     else:
         return str(phone_number) + "@vtext.com"
 
-@csrf_exempt
 def base(request):
     ''' Send out post requests via SMTP '''
 

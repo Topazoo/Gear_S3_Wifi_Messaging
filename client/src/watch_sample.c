@@ -8,7 +8,7 @@
 
 /* -------- Server Info Data Structures  -------- */
 typedef struct server {
-	char* url;  // Server url
+	char* url;  // Server URL
 	char* token; // CSRF token
 
 	http_session_h session; // HTTP session for POST
@@ -29,8 +29,6 @@ server_s* init_server(const char* server_url)
 	server->url = malloc(strlen(server_url) * sizeof(char) + sizeof(char));
 	strcpy(server->url, server_url);
 
-	server->token = malloc(1024 * sizeof(char)); // TODO - Make token size dynamic
-
 	return server;
 }
 
@@ -43,9 +41,12 @@ void deinit_server(server_s* server)
 	http_session_destroy(server->session);
 
 	/* Free memory */
-	free(server->url);
-	free(server->token);
-	free(server);
+	if(server->url)
+		free(server->url);
+	if(server->token)
+		free(server->token);
+	if(server)
+		free(server);
 }
 /* -------------------------------------------- */
 
@@ -130,26 +131,22 @@ void get_CSRF_token(server_s* server)
 		dlog_print(DLOG_DEBUG, "GET", "Failed to send transaction, error %d", code);
 		return;
 	}
-
 }
 
-/* ---------- Transaction Callbacks ----------- */
-void got_header_callback(http_transaction_h transaction, char* header, size_t length, void* data)
-{
-	/* Get and store HTTP header data */
-
-	dlog_print(DLOG_DEBUG, "HEADER", "Got Header", header);
-}
+/* ---------- Transaction Callback ----------- */
 
 void got_body_callback(http_transaction_h transaction, char* body, size_t length, size_t nmemb, void* data)
 {
 	/* Get and store HTTP body data */
 
-	char* token = parse_CSRF_token(body);
 	server_s* server = (server_s*) data;
 
+	/* Check body for CSRF token on a GET request */
+	char* token = parse_CSRF_token(body);
 	if(token)
 	{
+		/* Dynamically allocate room for token in server data structure */
+		server->token = malloc(1024 * sizeof(char));
 		strcpy(server->token, token);
 		dlog_print(DLOG_DEBUG, "Token", "Got token %s of length %d in body callback", server->token, strlen(server->token));
 	}
@@ -167,6 +164,10 @@ void set_transaction_headers(http_transaction_h transaction, const char* msg, ch
 {
 	/* Set HTTP headers required for a POST transaction */
 	char msg_length_buffer[5];
+	char token[1024] = "csrftoken=";
+
+	/* Build CSRF token cookie */
+	strcat(token, csrf);
 
 	/* Set content type and length */
 	http_transaction_header_add_field(transaction, "Content-Type", "application/x-www-form-urlencoded");
@@ -177,14 +178,14 @@ void set_transaction_headers(http_transaction_h transaction, const char* msg, ch
 	http_transaction_header_add_field(transaction, "HTTP-User-Agent", "Mozilla/5.0 (Linux; Tizen Wearable 4.0; SAMSUNG GEAR S3) AppleWebKit/537.3 (KHTML, like Gecko) Version/2.2 like Android 4.1; Mobile Safari/537.3");
 
 	/* Set CSRF token */
-	http_transaction_header_add_field(transaction, "CSRF-Cookie", csrf);
+	http_transaction_header_add_field(transaction, "Cookie", token);
 }
 
 char* build_query_string(message_s* message, char* csrf)
 {
 	/* Build message into server query */
 
-	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE * 3)); // TODO - Make query string dynamic
+	char* query = malloc(sizeof(char) * (TEXT_BUF_SIZE * 3));
 	strcpy(query, "message=");
 	strcat(query, message->message_body);
 	strcat(query, "&to_number=");
@@ -204,11 +205,11 @@ int send_message(appdata_s* ad)
 	/* Send message data from client (watch) to server */
 
 	int code;
-	char* csrf = "1234"; // TODO - Get and set real CSRF
+	char* csrf = ad->server->token;
 
 	char* to_number = "4152094084";
 	char* from_number = "4152094084";
-	char* input = "Hello from client!"; //TODO - Get input from watch
+	char* input = "Hello"; //TODO - Get input from watch
 
 	/* Get the message being sent */
 	message_s* message_struct = create_message(to_number, from_number, input);
@@ -249,6 +250,8 @@ int send_message(appdata_s* ad)
 		dlog_print(DLOG_DEBUG, "POST", "Failed to send transaction - error %d", code);
 		return -3;
 	}
+
+	dlog_print(DLOG_DEBUG, "TOKEN", "Token in send - %s", ad->server->token);
 
 	return 0;
 }
@@ -299,8 +302,6 @@ int ready_transaction(server_s* server, http_method_e method)
 		return -4;
 	}
 
-	/* Set callback for when header information is received */
-	http_transaction_set_received_header_cb(server->transaction, got_header_callback, server);
 	/* Set callback for when body information is received */
 	http_transaction_set_received_body_cb(server->transaction, got_body_callback, server);
 
@@ -382,12 +383,7 @@ static void deinitialize_HTTP(appdata_s* ad)
 }
 
 static void
-update_watch(appdata_s *ad)
-{
-	//char watch_text[TEXT_BUF_SIZE];
-	//snprintf(watch_text, TEXT_BUF_SIZE, "<align=center>\"%s\"</align>", ad->message->message_body);
-	//elm_object_text_set(ad->label, watch_text);
-}
+update_watch(appdata_s *ad) { }
 
 static void
 create_base_gui(appdata_s *ad, int width, int height)
@@ -437,10 +433,18 @@ app_create(int width, int height, void *data)
 	/* Create server data structure with restpoint URL */
 	ad->server = init_server("http://52.25.144.62/");
 
-	/* Configure client for HTTP POST */
+	/* Configure client for HTTP POST and GET*/
 	error_code = initialize_HTTP(ad);
 	if(error_code == 0)
 		dlog_print(DLOG_DEBUG, "HTTP", "HTTP is good to go!");
+
+	/* Get ready for GET transaction for CSRF token */
+	error_code = ready_transaction(ad->server, HTTP_METHOD_GET);
+	if(error_code == 0)
+		dlog_print(DLOG_DEBUG, "GET", "Transaction is good to go!");
+
+	/* Get CSRF token from server */
+	get_CSRF_token(ad->server);
 
 	create_base_gui(ad, width, height);
 

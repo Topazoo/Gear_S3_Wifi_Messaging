@@ -1,0 +1,237 @@
+<?xml version= "1.0"?>
+<ConsolidatedReport>
+<ReportId>1</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>30</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>30</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>2</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>68</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>68</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>3</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>71</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>71</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>4</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>74</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>74</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>5</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>153</LINE>
+   <COLUMN>3</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>153</LINE>
+         <COLUMN>3</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>6</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>188</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcpy'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>188</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>7</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>189</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>189</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>8</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>190</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>190</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>9</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>191</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>191</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>10</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>192</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>192</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>11</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>193</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>193</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>12</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>194</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>194</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+<ReportId>13</ReportId>
+<Report>
+   <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+   <LINE>195</LINE>
+   <COLUMN>2</COLUMN>
+   <Type>Potential insecure memory buffer bounds restriction in call 'strcat'</Type>
+   <Severity>MID</Severity>
+   <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+   <Events>
+      <Event>
+         <Id>1</Id>
+         <FILE>C:\Users\topaz\workspace\Watch_Sample\Debug\..\src\watch_sample.c</FILE>
+         <LINE>195</LINE>
+         <COLUMN>2</COLUMN>
+         <DES><![CDATA[Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119]]></DES>
+      </Event>
+   </Events>
+</Report>
+</ConsolidatedReport>
