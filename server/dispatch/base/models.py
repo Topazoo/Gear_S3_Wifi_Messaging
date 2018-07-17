@@ -42,7 +42,7 @@ class Message(models.Model):
 
 
     def send_message(self):
-        '''Sends a message to a email'''
+        '''Sends a message to an email'''
 
         server = smtplib.SMTP(str(self.user.gmail_server))
         server.ehlo()
