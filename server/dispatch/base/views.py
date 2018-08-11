@@ -54,7 +54,7 @@ def add_ext(post, key):
     phone_number = post['to_number']
 
     if 'carrier' in post.keys():
-        carrier = post['carrier']
+        carrier = post['carrier'].lower()
     else:
         carrier = "verizon"
 
