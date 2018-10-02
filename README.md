@@ -6,9 +6,7 @@
 [![requests 2.19.1](https://img.shields.io/badge/requests-2.19.1-brightgreen.svg)](https://pypi.org/project/requests/)
 
 ## Background
-Until now, the Samsung Gear S3 Classic did not allow users to send messages over Wifi.
-
-<b>This application allows messages to be sent from the watch over Wifi</b>
+<b>Until now, the Samsung Gear S3 Classic did not allow iPhone users to send text messages from the watch, or over Wi-Fi.</b>
 
 This repository contains the application client and server. The client runs natively on the watch and communicates with the server via the Tizen HTTP library. The server sends messages using the Gmail SMTP server.
 
